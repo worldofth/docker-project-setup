@@ -1,0 +1,48 @@
+ARG PHP_VERSION=8.2
+FROM php:${PHP_VERSION}-cli
+
+# Build arguments
+ARG PHP_EXTENSIONS="pdo_mysql,zip,gd"
+ARG UID=1000
+ARG GID=1000
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    libpng-dev \
+    libonig-dev \
+    libxml2-dev \
+    libzip-dev \
+    zip \
+    unzip \
+    vim \
+    nano \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install PHP extensions
+RUN docker-php-ext-install ${PHP_EXTENSIONS}
+
+# Install Composer 2
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+# Create user with matching UID/GID
+RUN groupadd -g ${GID} developer && \
+    useradd -u ${UID} -g developer -m developer -s /bin/bash
+
+# Create necessary directories
+RUN mkdir -p /var/www && \
+    chown -R developer:developer /var/www
+
+# Create composer cache directory
+RUN mkdir -p /home/developer/.composer && \
+    chown -R developer:developer /home/developer/.composer
+
+# Set working directory
+WORKDIR /var/www
+
+# Switch to developer user
+USER developer
+
+# Keep container running
+CMD ["tail", "-f", "/dev/null"]

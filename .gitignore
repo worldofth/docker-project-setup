@@ -1,0 +1,42 @@
+# Docker environment files
+docker/.env
+docker/mysql-data/
+docker/certs/
+docker/dumps/
+docker-compose.override.yml
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Composer
+vendor/
+composer.lock
+
+# Node modules (if using)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Framework specific
+.env
+.env.local
+.env.*.local
+storage/
+bootstrap/cache/

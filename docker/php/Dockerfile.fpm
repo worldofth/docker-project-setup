@@ -1,0 +1,41 @@
+ARG PHP_VERSION=8.2
+FROM php:${PHP_VERSION}-fpm
+
+# Build arguments
+ARG PHP_EXTENSIONS="pdo_mysql,zip,gd"
+ARG UID=1000
+ARG GID=1000
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    libpng-dev \
+    libonig-dev \
+    libxml2-dev \
+    libzip-dev \
+    zip \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install PHP extensions
+RUN docker-php-ext-install ${PHP_EXTENSIONS}
+
+# Create user with matching UID/GID
+RUN groupadd -g ${GID} developer && \
+    useradd -u ${UID} -g developer -m developer
+
+# Create necessary directories
+RUN mkdir -p /var/www && \
+    chown -R developer:developer /var/www
+
+# Set working directory
+WORKDIR /var/www
+
+# Switch to developer user
+USER developer
+
+# Expose port 9000 for PHP-FPM
+EXPOSE 9000
+
+CMD ["php-fpm"]
