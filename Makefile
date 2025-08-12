@@ -8,7 +8,7 @@
 #
 # QUICK START:
 #   make setup    # Initial project setup
-#   make up       # Start all services  
+#   make up       # Start all services
 #   make logs     # Monitor startup
 #
 # DAILY WORKFLOW:
@@ -161,22 +161,22 @@ rebuild: ## Rebuild containers (after Dockerfile changes)
 
 # Database operations
 db-cli: ## Access MySQL CLI
-	@cd docker && docker-compose exec mysql mysql -uroot -p$$(grep MYSQL_ROOT_PASSWORD .env | cut -d '=' -f2)
+	@cd docker && docker-compose exec mysql mysql -uroot -p$$(grep -v '^#' .env | grep MYSQL_ROOT_PASSWORD | cut -d '=' -f2)
 
 db-dump: ## Export database to docker/dumps/
 	@echo "$(YELLOW)Creating database dump...$(NC)"
 	@mkdir -p docker/dumps
-	@cd docker && docker-compose exec mysql mysqldump -uroot -p$$(grep MYSQL_ROOT_PASSWORD .env | cut -d '=' -f2) $$(grep MYSQL_DATABASE .env | cut -d '=' -f2) > dumps/dump_$$(date +%Y%m%d_%H%M%S).sql
+	@cd docker && docker-compose exec mysql mysqldump -uroot -p$$(grep -v '^#' .env | grep MYSQL_ROOT_PASSWORD | cut -d '=' -f2) $$(grep -v '^#' .env | grep MYSQL_DATABASE | cut -d '=' -f2) > dumps/dump_$$(date +%Y%m%d_%H%M%S).sql
 	@echo "$(GREEN)✓$(NC) Database dumped to docker/dumps/"
 
 db-import: ## Import SQL from stdin (usage: make db-import < backup.sql)
 	@echo "$(YELLOW)Importing SQL from stdin...$(NC)"
-	@cd docker && docker-compose exec -T mysql mysql -uroot -p$$(grep MYSQL_ROOT_PASSWORD .env | cut -d '=' -f2) $$(grep MYSQL_DATABASE .env | cut -d '=' -f2)
+	@cd docker && docker-compose exec -T mysql mysql -uroot -p$$(grep -v '^#' .env | grep MYSQL_ROOT_PASSWORD | cut -d '=' -f2) $$(grep -v '^#' .env | grep MYSQL_DATABASE | cut -d '=' -f2)
 	@echo "$(GREEN)✓$(NC) Database imported"
 
 db-reset: ## Drop and recreate database
 	@echo "$(YELLOW)Resetting database...$(NC)"
-	@cd docker && docker-compose exec mysql mysql -uroot -p$$(grep MYSQL_ROOT_PASSWORD .env | cut -d '=' -f2) -e "DROP DATABASE IF EXISTS $$(grep MYSQL_DATABASE .env | cut -d '=' -f2); CREATE DATABASE $$(grep MYSQL_DATABASE .env | cut -d '=' -f2);"
+	@cd docker && docker-compose exec mysql mysql -uroot -p$$(grep -v '^#' .env | grep MYSQL_ROOT_PASSWORD | cut -d '=' -f2) -e "DROP DATABASE IF EXISTS $$(grep -v '^#' .env | grep MYSQL_DATABASE | cut -d '=' -f2); CREATE DATABASE $$(grep -v '^#' .env | grep MYSQL_DATABASE | cut -d '=' -f2);"
 	@echo "$(GREEN)✓$(NC) Database reset"
 
 # =============================================================================
@@ -264,36 +264,6 @@ fix-perms: ## Fix file permissions
 	@sudo chown -R $(shell id -u):$(shell id -g) .
 	@echo "$(GREEN)✓$(NC) Permissions fixed"
 
-# =============================================================================
-# ADVANCED CERTIFICATE MANAGEMENT
-# =============================================================================
-# Advanced SSL certificate commands for macOS keychain management
-
-install-ca-macos: ## Install CA certificate to macOS keychain (manual method)
-	@echo "$(YELLOW)Installing CA certificate to macOS keychain...$(NC)"
-	@if [ ! -f ~/local-cert-authority/rootCA.pem ]; then \
-		echo "$(RED)Error:$(NC) CA certificate not found at ~/local-cert-authority/rootCA.pem"; \
-		echo "Please run 'make certs' first to generate the CA"; \
-		exit 1; \
-	fi
-	@echo "$(YELLOW)Adding CA to system keychain (requires admin password)...$(NC)"
-	@sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ~/local-cert-authority/rootCA.pem
-	@echo "$(GREEN)✓$(NC) CA certificate installed successfully"
-	@echo "$(GREEN)✓$(NC) All mkcert certificates will now be trusted by browsers"
-
-remove-ca-macos: ## Remove CA certificate from macOS keychain
-	@echo "$(YELLOW)Removing CA certificate from macOS keychain...$(NC)"
-	@sudo security delete-certificate -c "mkcert" /Library/Keychains/System.keychain || true
-	@echo "$(GREEN)✓$(NC) CA certificate removed (if it existed)"
-
-verify-ca-macos: ## Verify CA is installed in macOS keychain
-	@echo "$(YELLOW)Checking for CA certificate in keychain...$(NC)"
-	@if security find-certificate -a -c "mkcert" /Library/Keychains/System.keychain > /dev/null 2>&1; then \
-		echo "$(GREEN)✓$(NC) CA certificate is installed"; \
-		security find-certificate -p -c "mkcert" /Library/Keychains/System.keychain | openssl x509 -noout -subject; \
-	else \
-		echo "$(RED)❌$(NC) CA certificate not found in keychain"; \
-	fi
 
 # =============================================================================
 # MAKEFILE INTERNAL FUNCTIONS
