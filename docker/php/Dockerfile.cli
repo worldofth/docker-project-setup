@@ -1,48 +1,112 @@
+# =============================================================================
+# PHP CLI Container for Development Tools and Commands
+# =============================================================================
+# This Dockerfile creates a PHP CLI container with Composer and development tools
+# for running command-line operations like package management, migrations, and
+# framework-specific commands (Artisan, Drush, etc.)
+
+# PHP version argument - should match the FPM container version
+# Supports: 8.0, 8.1, 8.2, 8.3
 ARG PHP_VERSION=8.2
 FROM php:${PHP_VERSION}-cli
 
-# Build arguments
+# =============================================================================
+# BUILD ARGUMENTS
+# =============================================================================
+# These should match the FPM container for consistency
+
+# Same PHP extensions as FPM container for compatibility
+# CLI may need additional extensions like pcntl, sockets for some tasks
 ARG PHP_EXTENSIONS="pdo_mysql,zip,gd"
+
+# User and Group IDs matching host system and FPM container
+# Ensures consistent file permissions across all containers
 ARG UID=1000
 ARG GID=1000
 
-# Install system dependencies
+# =============================================================================
+# SYSTEM DEPENDENCIES INSTALLATION
+# =============================================================================
+# Install libraries for PHP extensions plus CLI development tools
+
 RUN apt-get update && apt-get install -y \
+    # Version control for Composer packages and development
     git \
+    # HTTP client library
     curl \
+    # Required for GD extension (image processing)
     libpng-dev \
+    # Required for mbstring extension (multibyte strings)
     libonig-dev \
+    # Required for XML extensions
     libxml2-dev \
+    # Required for ZIP extension
     libzip-dev \
+    # Archive utilities for package management
     zip \
     unzip \
+    # Text editors for debugging and file editing inside container
     vim \
     nano \
+    # Clean up package cache to reduce image size
     && rm -rf /var/lib/apt/lists/*
 
-# Install PHP extensions
+# =============================================================================
+# PHP EXTENSIONS INSTALLATION
+# =============================================================================
+# Install same extensions as FPM container for consistency
+# CLI scripts may interact with the same data and APIs
+
 RUN docker-php-ext-install ${PHP_EXTENSIONS}
 
-# Install Composer 2
+# =============================================================================
+# COMPOSER INSTALLATION
+# =============================================================================
+# Install Composer 2 from official image for package management
+# This is the modern PHP dependency manager required for most PHP projects
+
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Create user with matching UID/GID
+# =============================================================================
+# USER SETUP FOR SECURITY AND PERMISSIONS
+# =============================================================================
+# Create non-root user matching the FPM container and host system
+# Include bash shell for better interactive experience
+
 RUN groupadd -g ${GID} developer && \
     useradd -u ${UID} -g developer -m developer -s /bin/bash
 
-# Create necessary directories
+# =============================================================================
+# DIRECTORY SETUP
+# =============================================================================
+# Configure directories for web root and Composer cache
+
+# Web root directory - same as FPM container
 RUN mkdir -p /var/www && \
     chown -R developer:developer /var/www
 
-# Create composer cache directory
+# Composer global cache directory for faster package installs
+# This directory is mounted from host in docker-compose.yml for persistence
 RUN mkdir -p /home/developer/.composer && \
     chown -R developer:developer /home/developer/.composer
 
-# Set working directory
+# =============================================================================
+# WORKING DIRECTORY
+# =============================================================================
+# Set to project root where CLI commands will be executed
 WORKDIR /var/www
 
-# Switch to developer user
+# =============================================================================
+# SECURITY: SWITCH TO NON-ROOT USER
+# =============================================================================
+# Run all CLI commands as the developer user
+# Prevents security issues and ensures proper file permissions
 USER developer
 
-# Keep container running
+# =============================================================================
+# CONTAINER STARTUP
+# =============================================================================
+# Keep container running indefinitely for interactive use
+# This allows docker exec commands and interactive shells
+# Alternative: sleep infinity (but tail is more standard)
 CMD ["tail", "-f", "/dev/null"]

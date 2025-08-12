@@ -1,41 +1,97 @@
+# =============================================================================
+# PHP-FPM Container for Web Request Processing
+# =============================================================================
+# This Dockerfile creates a PHP-FPM container optimized for handling web requests
+# through nginx proxy. It includes common PHP extensions and runs as a non-root
+# user for security and file permission consistency with the host system.
+
+# PHP version argument - passed from docker-compose.yml
+# Supports: 8.0, 8.1, 8.2, 8.3
 ARG PHP_VERSION=8.2
 FROM php:${PHP_VERSION}-fpm
 
-# Build arguments
+# =============================================================================
+# BUILD ARGUMENTS
+# =============================================================================
+# These can be customized in docker-compose.yml or .env file
+
+# Comma-separated list of PHP extensions to install
+# Common options: pdo_mysql,pdo_pgsql,zip,gd,mbstring,xml,curl,redis,imagick,soap
 ARG PHP_EXTENSIONS="pdo_mysql,zip,gd"
+
+# User and Group IDs to match host system permissions
+# Set these to match your local user: `id -u` and `id -g`
 ARG UID=1000
 ARG GID=1000
 
-# Install system dependencies
+# =============================================================================
+# SYSTEM DEPENDENCIES INSTALLATION
+# =============================================================================
+# Install libraries required for PHP extensions and development tools
+
 RUN apt-get update && apt-get install -y \
+    # Version control for Composer packages
     git \
+    # HTTP client library
     curl \
+    # Required for GD extension (image processing)
     libpng-dev \
+    # Required for mbstring extension (multibyte strings)
     libonig-dev \
+    # Required for XML extensions
     libxml2-dev \
+    # Required for ZIP extension
     libzip-dev \
+    # Archive utilities for package management
     zip \
     unzip \
+    # Clean up package cache to reduce image size
     && rm -rf /var/lib/apt/lists/*
 
-# Install PHP extensions
+# =============================================================================
+# PHP EXTENSIONS INSTALLATION
+# =============================================================================
+# Install PHP extensions based on the PHP_EXTENSIONS argument
+# These are compiled and enabled automatically
+
 RUN docker-php-ext-install ${PHP_EXTENSIONS}
 
-# Create user with matching UID/GID
+# =============================================================================
+# USER SETUP FOR SECURITY AND PERMISSIONS
+# =============================================================================
+# Create non-root user with matching host system UID/GID
+# This ensures files created in the container have correct permissions on the host
+
 RUN groupadd -g ${GID} developer && \
     useradd -u ${UID} -g developer -m developer
 
-# Create necessary directories
+# =============================================================================
+# DIRECTORY SETUP
+# =============================================================================
+# Create and configure the web root directory with proper ownership
+
 RUN mkdir -p /var/www && \
     chown -R developer:developer /var/www
 
-# Set working directory
+# Set working directory where PHP-FPM will execute scripts
 WORKDIR /var/www
 
-# Switch to developer user
+# =============================================================================
+# SECURITY: SWITCH TO NON-ROOT USER
+# =============================================================================
+# Run PHP-FPM as the developer user for security
+# This prevents potential privilege escalation attacks
 USER developer
 
-# Expose port 9000 for PHP-FPM
+# =============================================================================
+# NETWORKING
+# =============================================================================
+# PHP-FPM listens on port 9000 for FastCGI requests from nginx
 EXPOSE 9000
 
+# =============================================================================
+# CONTAINER STARTUP
+# =============================================================================
+# Start PHP-FPM in foreground mode (required for Docker)
+# Configuration is handled through mounted php-fpm.ini file
 CMD ["php-fpm"]

@@ -1,9 +1,54 @@
 #!/bin/bash
 
-# Certificate generation script for local development
-# Requires mkcert to be installed
+# =============================================================================
+# SSL Certificate Generation Script with mkcert
+# =============================================================================
+#
+# PURPOSE:
+#   Generates trusted SSL certificates for local development using mkcert.
+#   Creates project-specific certificates that are trusted by the system.
+#
+# WHEN TO USE:
+#   - When you want HTTPS support for your development environment
+#   - After setting PROJECT_NAME in docker/.env
+#   - When certificates are missing or expired
+#
+# WHAT IT DOES:
+#   1. Validates mkcert installation
+#   2. Sets up shared certificate authority if needed
+#   3. Generates project-specific SSL certificates
+#   4. Creates symlinks for nginx compatibility
+#   5. Provides access URLs and next steps
+#
+# REQUIREMENTS:
+#   - mkcert installed (brew install mkcert)
+#   - PROJECT_NAME configured in docker/.env
+#   - mkcert CA installed (mkcert -install)
+#
+# GENERATED FILES:
+#   - docker/certs/{PROJECT_NAME}.test.pem
+#   - docker/certs/{PROJECT_NAME}.test-key.pem  
+#   - docker/certs/cert.pem (symlink)
+#   - docker/certs/cert-key.pem (symlink)
+#
+# USAGE:
+#   ./docker/scripts/generate-certs.sh
+#   OR
+#   make certs
+#
+# BENEFITS OVER SELF-SIGNED:
+#   - No browser security warnings
+#   - Trusted by system and browsers
+#   - Works with local domain names
+#   - No certificate exceptions needed
+#
+# EXIT CODES:
+#   0 - Success
+#   1 - Missing requirements or generation failed
+#
+# =============================================================================
 
-set -e
+set -e  # Exit immediately on any error
 
 # Colors for output
 GREEN='\033[0;32m'

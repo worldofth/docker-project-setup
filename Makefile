@@ -1,39 +1,101 @@
+# =============================================================================
+# Docker PHP Development Environment - Makefile
+# =============================================================================
+#
+# This Makefile provides a simple command interface for managing the Docker
+# development environment. All commands are designed to be run from the
+# project root directory.
+#
+# QUICK START:
+#   make setup    # Initial project setup
+#   make up       # Start all services  
+#   make logs     # Monitor startup
+#
+# DAILY WORKFLOW:
+#   make status   # Check what's running
+#   make cli      # Access PHP container
+#   make db-cli   # Access database
+#
+# For complete command list, run: make help
+#
+# =============================================================================
+
+# Declare all phony targets to avoid conflicts with files
 .PHONY: help setup up down restart status logs clean rebuild certs
 .PHONY: db-cli db-dump db-import db-reset fix-perms cli
 .PHONY: composer php artisan drush artisan-migrate artisan-clear composer-install
 .DEFAULT_GOAL := help
 
-# Colors for help output
+# =============================================================================
+# CONFIGURATION AND DETECTION
+# =============================================================================
+
+# Colors for enhanced terminal output
 GREEN := \033[0;32m
 YELLOW := \033[0;33m
 RED := \033[0;31m
+BLUE := \033[0;34m
+BOLD := \033[1m
 NC := \033[0m # No Color
 
-# Detect framework/tools
+# Auto-detect available frameworks and tools in current project
 ARTISAN_EXISTS := $(shell test -f artisan && echo "yes" || echo "no")
 DRUSH_EXISTS := $(shell test -f vendor/bin/drush -o -f drush && echo "yes" || echo "no")
 COMPOSER_EXISTS := $(shell test -f composer.json && echo "yes" || echo "no")
 
-help: ## Show this help message
-	@echo "$(GREEN)Available commands:$(NC)"
+# =============================================================================
+# HELP SYSTEM
+# =============================================================================
+
+help: ## Show this help message with organized command categories
+	@echo "$(BOLD)$(BLUE)🐳 Docker PHP Development Environment$(NC)"
+	@echo "$(BLUE)═══════════════════════════════════════════════════════════$(NC)"
 	@echo ""
-	@echo "$(YELLOW)Environment Management:$(NC)"
+	@echo "$(BOLD)$(GREEN)📋 QUICK START GUIDE:$(NC)"
+	@echo "  $(YELLOW)1.$(NC) make setup          # First-time project setup"
+	@echo "  $(YELLOW)2.$(NC) make up             # Start all services"
+	@echo "  $(YELLOW)3.$(NC) Visit: http://localhost:8014 (or your HTTP_PORT)"
+	@echo "  $(YELLOW)4.$(NC) make certs          # Optional: Generate SSL certificates"
+	@echo ""
+	@echo "$(BOLD)$(GREEN)🚀 ENVIRONMENT MANAGEMENT:$(NC)"
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  $(GREEN)%-15s$(NC) %s\n", $$1, $$2}' $(MAKEFILE_LIST) | grep -E "(setup|up|down|restart|status|logs|clean|rebuild)"
 	@echo ""
-	@echo "$(YELLOW)Database Operations:$(NC)"
+	@echo "$(BOLD)$(GREEN)🗄️ DATABASE OPERATIONS:$(NC)"
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  $(GREEN)%-15s$(NC) %s\n", $$1, $$2}' $(MAKEFILE_LIST) | grep -E "db-"
 	@echo ""
-	@echo "$(YELLOW)Development Tools:$(NC)"
+	@echo "$(BOLD)$(GREEN)⚙️ DEVELOPMENT TOOLS:$(NC)"
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  $(GREEN)%-15s$(NC) %s\n", $$1, $$2}' $(MAKEFILE_LIST) | grep -E "(composer|php|artisan|drush|cli)"
 	@echo ""
-	@echo "$(YELLOW)Utilities:$(NC)"
+	@echo "$(BOLD)$(GREEN)🔧 UTILITIES:$(NC)"
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  $(GREEN)%-15s$(NC) %s\n", $$1, $$2}' $(MAKEFILE_LIST) | grep -E "(certs|fix-perms)"
 	@echo ""
-	@echo "$(YELLOW)Usage Examples:$(NC)"
-	@echo "  make artisan cache:clear"
-	@echo "  make composer require laravel/telescope"
-	@echo "  make db-import < backup.sql"
-	@echo "  make php -v"
+	@echo "$(BOLD)$(GREEN)💡 COMMON USAGE EXAMPLES:$(NC)"
+	@echo "  $(BLUE)Framework Commands:$(NC)"
+	@echo "    make artisan cache:clear"
+	@echo "    make artisan migrate:fresh --seed"
+	@echo "    make drush status"
+	@echo ""
+	@echo "  $(BLUE)Package Management:$(NC)"
+	@echo "    make composer install"
+	@echo "    make composer require laravel/telescope"
+	@echo "    make composer update"
+	@echo ""
+	@echo "  $(BLUE)Database Operations:$(NC)"
+	@echo "    make db-dump > backup.sql"
+	@echo "    make db-import < backup.sql"
+	@echo "    make db-reset"
+	@echo ""
+	@echo "  $(BLUE)Debugging & Access:$(NC)"
+	@echo "    make cli             # Interactive PHP shell"
+	@echo "    make php -v          # Check PHP version"
+	@echo "    make logs-mysql      # MySQL container logs"
+	@echo ""
+	@echo "$(YELLOW)💡 TIP:$(NC) Run 'make status' anytime to check what containers are running"
+
+# =============================================================================
+# ENVIRONMENT MANAGEMENT COMMANDS
+# =============================================================================
+# Commands for starting, stopping, and managing the Docker environment
 
 setup: ## Initial project setup (copy .env, create directories)
 	@echo "$(YELLOW)Setting up project...$(NC)"
@@ -92,6 +154,11 @@ rebuild: ## Rebuild containers (after Dockerfile changes)
 	@cd docker && docker-compose build --no-cache
 	@echo "$(GREEN)✓$(NC) Rebuild complete"
 
+# =============================================================================
+# DATABASE OPERATIONS
+# =============================================================================
+# Commands for managing MySQL database, backups, and data import/export
+
 # Database operations
 db-cli: ## Access MySQL CLI
 	@cd docker && docker-compose exec mysql mysql -uroot -p$$(grep MYSQL_ROOT_PASSWORD .env | cut -d '=' -f2)
@@ -111,6 +178,11 @@ db-reset: ## Drop and recreate database
 	@echo "$(YELLOW)Resetting database...$(NC)"
 	@cd docker && docker-compose exec mysql mysql -uroot -p$$(grep MYSQL_ROOT_PASSWORD .env | cut -d '=' -f2) -e "DROP DATABASE IF EXISTS $$(grep MYSQL_DATABASE .env | cut -d '=' -f2); CREATE DATABASE $$(grep MYSQL_DATABASE .env | cut -d '=' -f2);"
 	@echo "$(GREEN)✓$(NC) Database reset"
+
+# =============================================================================
+# DEVELOPMENT TOOLS & COMMANDS
+# =============================================================================
+# PHP, Composer, and framework-specific commands (Laravel, Drupal, etc.)
 
 # PHP/Application commands
 composer: ## Run composer commands (usage: make composer install)
@@ -150,6 +222,11 @@ artisan-clear: ## Clear Laravel caches
 composer-install: ## Install composer dependencies
 	@make composer install
 
+# =============================================================================
+# UTILITIES & MAINTENANCE
+# =============================================================================
+# SSL certificates, permissions, and system maintenance commands
+
 # Utilities
 certs: ## Generate trusted SSL certificates with mkcert
 	@echo "$(YELLOW)Generating trusted SSL certificates with mkcert...$(NC)"
@@ -187,6 +264,42 @@ fix-perms: ## Fix file permissions
 	@sudo chown -R $(shell id -u):$(shell id -g) .
 	@echo "$(GREEN)✓$(NC) Permissions fixed"
 
-# Prevent Make from treating arguments as targets
+# =============================================================================
+# ADVANCED CERTIFICATE MANAGEMENT
+# =============================================================================
+# Advanced SSL certificate commands for macOS keychain management
+
+install-ca-macos: ## Install CA certificate to macOS keychain (manual method)
+	@echo "$(YELLOW)Installing CA certificate to macOS keychain...$(NC)"
+	@if [ ! -f ~/local-cert-authority/rootCA.pem ]; then \
+		echo "$(RED)Error:$(NC) CA certificate not found at ~/local-cert-authority/rootCA.pem"; \
+		echo "Please run 'make certs' first to generate the CA"; \
+		exit 1; \
+	fi
+	@echo "$(YELLOW)Adding CA to system keychain (requires admin password)...$(NC)"
+	@sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ~/local-cert-authority/rootCA.pem
+	@echo "$(GREEN)✓$(NC) CA certificate installed successfully"
+	@echo "$(GREEN)✓$(NC) All mkcert certificates will now be trusted by browsers"
+
+remove-ca-macos: ## Remove CA certificate from macOS keychain
+	@echo "$(YELLOW)Removing CA certificate from macOS keychain...$(NC)"
+	@sudo security delete-certificate -c "mkcert" /Library/Keychains/System.keychain || true
+	@echo "$(GREEN)✓$(NC) CA certificate removed (if it existed)"
+
+verify-ca-macos: ## Verify CA is installed in macOS keychain
+	@echo "$(YELLOW)Checking for CA certificate in keychain...$(NC)"
+	@if security find-certificate -a -c "mkcert" /Library/Keychains/System.keychain > /dev/null 2>&1; then \
+		echo "$(GREEN)✓$(NC) CA certificate is installed"; \
+		security find-certificate -p -c "mkcert" /Library/Keychains/System.keychain | openssl x509 -noout -subject; \
+	else \
+		echo "$(RED)❌$(NC) CA certificate not found in keychain"; \
+	fi
+
+# =============================================================================
+# MAKEFILE INTERNAL FUNCTIONS
+# =============================================================================
+
+# Prevent Make from treating command arguments as targets
+# This allows commands like "make artisan cache:clear" to work properly
 %:
 	@:

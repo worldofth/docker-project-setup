@@ -1,8 +1,42 @@
 #!/bin/bash
 
-# Initial project setup script
+# =============================================================================
+# Docker Development Environment Setup Script
+# =============================================================================
+#
+# PURPOSE:
+#   Initializes a new PHP project with Docker development environment.
+#   Creates necessary configuration files, directories, and sets up permissions.
+#
+# WHEN TO USE:
+#   - First time setting up the project
+#   - After cloning a repository that includes this Docker setup
+#   - When .env file is missing or corrupted
+#
+# WHAT IT DOES:
+#   1. Checks Docker is running
+#   2. Creates docker/.env from example template
+#   3. Auto-configures UID/GID for file permissions
+#   4. Creates required directories (mysql-data, certs, dumps)
+#   5. Makes all scripts executable
+#   6. Validates configuration
+#
+# REQUIREMENTS:
+#   - Docker Desktop installed and running
+#   - Basic Unix tools (mkdir, chmod, sed, grep)
+#
+# USAGE:
+#   ./docker/scripts/setup.sh
+#   OR
+#   make setup
+#
+# EXIT CODES:
+#   0 - Success
+#   1 - Docker not running or other critical error
+#
+# =============================================================================
 
-set -e
+set -e  # Exit immediately on any error
 
 # Colors for output
 GREEN='\033[0;32m'
