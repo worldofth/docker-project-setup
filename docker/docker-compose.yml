@@ -13,7 +13,22 @@ services:
       - ./certs:/etc/nginx/certs:ro
     depends_on:
       - php-fpm
+      - cert-init
     restart: unless-stopped
+
+  cert-init:
+    image: alpine:latest
+    container_name: ${PROJECT_NAME:-myproject}-cert-init
+    volumes:
+      - ./certs:/certs
+      - ./scripts:/scripts:ro
+    command: >
+      sh -c "
+        apk add --no-cache openssl &&
+        /scripts/ensure-certs.sh &&
+        echo 'Certificate initialization complete'
+      "
+    working_dir: /
 
   php-fpm:
     build:

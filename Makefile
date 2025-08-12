@@ -49,6 +49,8 @@ setup: ## Initial project setup (copy .env, create directories)
 	@echo "$(GREEN)✓$(NC) Setup complete! Edit docker/.env then run 'make up'"
 
 up: ## Start all services
+	@echo "$(YELLOW)Ensuring SSL certificates exist...$(NC)"
+	@./docker/scripts/ensure-certs.sh
 	@echo "$(YELLOW)Starting services...$(NC)"
 	@cd docker && docker-compose up -d
 	@echo "$(GREEN)✓$(NC) Services started"
@@ -149,10 +151,10 @@ composer-install: ## Install composer dependencies
 	@make composer install
 
 # Utilities
-certs: ## Generate SSL certificates
-	@echo "$(YELLOW)Generating SSL certificates...$(NC)"
+certs: ## Generate trusted SSL certificates with mkcert
+	@echo "$(YELLOW)Generating trusted SSL certificates with mkcert...$(NC)"
 	@./docker/scripts/generate-certs.sh
-	@echo "$(GREEN)✓$(NC) Certificates generated"
+	@echo "$(GREEN)✓$(NC) Trusted certificates generated"
 
 install-ca-macos: ## Install CA certificate to macOS keychain (manual method)
 	@echo "$(YELLOW)Installing CA certificate to macOS keychain...$(NC)"
