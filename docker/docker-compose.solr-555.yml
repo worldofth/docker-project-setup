@@ -1,0 +1,50 @@
+# Docker Compose configuration for Solr 5.5.5 Search Engine
+# This file defines Solr 5.5.5 service for legacy website compatibility
+# Use alongside main docker-compose.yml for complete development stack
+
+# Project name must match main stack for network connectivity
+# Override in .env: PROJECT_NAME=your-project-name
+name: ${PROJECT_NAME:-myproject}
+
+services:
+  # =============================================================================
+  # SOLR 5.5.5 SEARCH ENGINE
+  # =============================================================================
+  # Legacy Solr version required by some older websites
+  # Provides full-text search capabilities with custom schema support
+  solr:
+    build:
+      # Custom Dockerfile with Ubuntu 18.04 and Java 8
+      context: ./solr555
+      dockerfile: Dockerfile
+    container_name: ${PROJECT_NAME:-myproject}-solr555
+    ports:
+      # External access port - customize in .env with SOLR_555_PORT
+      # Internal containers access via solr:8983
+      - "${SOLR_555_PORT:-8984}:8983"
+    volumes:
+      # Persistent Solr data storage (cores, indexes, configurations)
+      - ./solr555/solr-data:/home/solr/solr-5.5.5/server/solr
+      # Custom schema and configuration files directory
+      - ./solr555/data:/home/solr/data
+      # Custom startup and shutdown scripts
+      - ./solr555/bin/docker-run.sh:/usr/local/bin/docker-run.sh
+      - ./solr555/bin/docker-stop.sh:/usr/local/bin/docker-stop.sh
+    environment:
+      # Enable CORS for browser-based applications - customize in .env
+      - ENABLE_CORS=${SOLR_555_ENABLE_CORS:-true}
+    restart: unless-stopped
+    networks:
+      # Connect to main project network for container communication
+      - default
+
+# =============================================================================
+# NETWORK CONFIGURATION
+# =============================================================================
+# Connect to the same network as main docker-compose.yml stack
+# This allows containers to communicate via service names
+networks:
+  default:
+    # Use external network created by main stack
+    name: ${PROJECT_NAME:-myproject}_default
+    external: true

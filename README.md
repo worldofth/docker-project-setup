@@ -201,6 +201,22 @@ This development environment setup is provided as-is for development use.
 - **Check `make status`** if something isn't working
 - **Use `make logs`** to debug issues
 
+## 🔍 Additional Services
+
+### Solr 5.5.5 Search Engine
+
+For legacy website compatibility, a Solr 5.5.5 service is available:
+
+📖 **[Complete Solr 5.5.5 Documentation](./solr555.md)**
+
+Quick start:
+```bash
+make solr555-up     # Start Solr service
+make solr555-setup  # Configure core and schema
+```
+
+Access at: `http://localhost:8984/solr/`
+
 ## 🆘 Support
 
 Common issues and solutions:

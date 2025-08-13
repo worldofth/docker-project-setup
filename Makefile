@@ -24,6 +24,8 @@
 .PHONY: help setup up down restart status logs clean rebuild certs
 .PHONY: db-cli db-dump db-import db-reset fix-perms cli
 .PHONY: composer php artisan drush artisan-migrate artisan-clear composer-install
+.PHONY: solr555-up solr555-down solr555-restart solr555-status solr555-logs solr555-setup solr555-cli solr555-rebuild solr555-clean
+.PHONY: up-with-solr555 down-all
 .DEFAULT_GOAL := help
 
 # =============================================================================
@@ -65,6 +67,9 @@ help: ## Show this help message with organized command categories
 	@echo ""
 	@echo "$(BOLD)$(GREEN)⚙️ DEVELOPMENT TOOLS:$(NC)"
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  $(GREEN)%-15s$(NC) %s\n", $$1, $$2}' $(MAKEFILE_LIST) | grep -E "(composer|php|artisan|drush|cli)"
+	@echo ""
+	@echo "$(BOLD)$(GREEN)🔍 SOLR SEARCH ENGINE (5.5.5):$(NC)"
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  $(GREEN)%-15s$(NC) %s\n", $$1, $$2}' $(MAKEFILE_LIST) | grep -E "solr555"
 	@echo ""
 	@echo "$(BOLD)$(GREEN)🔧 UTILITIES:$(NC)"
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  $(GREEN)%-15s$(NC) %s\n", $$1, $$2}' $(MAKEFILE_LIST) | grep -E "(certs|fix-perms)"
@@ -263,6 +268,62 @@ fix-perms: ## Fix file permissions
 	@echo "$(YELLOW)Fixing file permissions...$(NC)"
 	@sudo chown -R $(shell id -u):$(shell id -g) .
 	@echo "$(GREEN)✓$(NC) Permissions fixed"
+
+# =============================================================================
+# SOLR 5.5.5 SEARCH ENGINE COMMANDS
+# =============================================================================
+# Commands for managing Solr 5.5.5 service for legacy website compatibility
+
+solr555-up: ## Start Solr 5.5.5 service
+	@echo "$(YELLOW)Starting Solr 5.5.5 service...$(NC)"
+	@cd docker && docker-compose -f docker-compose.solr-555.yml up -d
+	@echo "$(GREEN)✓$(NC) Solr 5.5.5 started"
+
+solr555-down: ## Stop Solr 5.5.5 service
+	@echo "$(YELLOW)Stopping Solr 5.5.5 service...$(NC)"
+	@cd docker && docker-compose -f docker-compose.solr-555.yml down
+	@echo "$(GREEN)✓$(NC) Solr 5.5.5 stopped"
+
+solr555-restart: ## Restart Solr 5.5.5 service
+	@echo "$(YELLOW)Restarting Solr 5.5.5 service...$(NC)"
+	@cd docker && docker-compose -f docker-compose.solr-555.yml restart
+	@echo "$(GREEN)✓$(NC) Solr 5.5.5 restarted"
+
+solr555-status: ## Show Solr 5.5.5 container status
+	@cd docker && docker-compose -f docker-compose.solr-555.yml ps
+
+solr555-logs: ## Show Solr 5.5.5 logs
+	@cd docker && docker-compose -f docker-compose.solr-555.yml logs -f solr
+
+solr555-setup: ## Create Solr core and configure schema
+	@echo "$(YELLOW)Setting up Solr 5.5.5 core and schema...$(NC)"
+	@cd docker && ./solr555/setup.sh
+	@echo "$(GREEN)✓$(NC) Solr 5.5.5 core configured"
+
+solr555-cli: ## Access Solr 5.5.5 container shell
+	@cd docker && docker-compose -f docker-compose.solr-555.yml exec solr bash
+
+solr555-rebuild: ## Rebuild Solr 5.5.5 containers (after Dockerfile changes)
+	@echo "$(YELLOW)Rebuilding Solr 5.5.5 containers...$(NC)"
+	@cd docker && docker-compose -f docker-compose.solr-555.yml build --no-cache
+	@echo "$(GREEN)✓$(NC) Solr 5.5.5 rebuild complete"
+
+solr555-clean: ## Remove Solr 5.5.5 containers and volumes
+	@echo "$(YELLOW)Cleaning up Solr 5.5.5...$(NC)"
+	@cd docker && docker-compose -f docker-compose.solr-555.yml down -v --remove-orphans
+	@echo "$(GREEN)✓$(NC) Solr 5.5.5 cleanup complete"
+
+up-with-solr555: ## Start main stack + Solr 5.5.5
+	@echo "$(YELLOW)Starting main stack with Solr 5.5.5...$(NC)"
+	@make up
+	@make solr555-up
+	@echo "$(GREEN)✓$(NC) All services started with Solr 5.5.5"
+
+down-all: ## Stop main stack + all Solr services
+	@echo "$(YELLOW)Stopping all services...$(NC)"
+	@make down
+	@make solr555-down
+	@echo "$(GREEN)✓$(NC) All services stopped"
 
 
 # =============================================================================
